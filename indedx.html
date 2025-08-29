@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>팩트체크</title> <!-- Changed title here -->
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+        }
+        .container {
+            max-width: 900px; /* Wider container for better layout */
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 1.5rem; /* More rounded corners */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem;
+        }
+        .btn-check {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-check:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .selected-true {
+            background-color: #4CAF50; /* Green for True */
+            color: white;
+        }
+        .selected-false {
+            background-color: #F44336; /* Red for False */
+            color: white;
+        }
+        .info-card {
+            min-height: 120px; /* Ensure cards have a minimum height */
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6; /* Blue spinner */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div id="gameContainer" class="container mx-auto p-6 bg-white rounded-3xl shadow-lg flex flex-col items-center">
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-8 text-center leading-tight">
+            🕵️‍♂️ 사실 혹은 거짓 탐정단 🕵️‍♀️
+        </h1>
+
+        <!-- Intro Screen -->
+        <div id="introScreen" class="text-center mb-8">
+            <p class="text-xl text-gray-700 mb-4">
+                제시된 정보가 사실인지 거짓인지 팩트체크하여 진실을 밝혀보세요!
+            </p>
+            <button id="startButton" class="px-8 py-4 bg-blue-600 text-white font-bold text-xl rounded-xl shadow-lg hover:bg-blue-700 transition transform hover:scale-105 duration-200 mb-8">
+                게임 시작!
+            </button>
+            <p class="text-sm text-gray-500">
+                &copy; (주)제이에스에듀, JSPARK
+            </p>
+        </div>
+
+        <!-- Game Area -->
+        <div id="gameArea" class="hidden w-full">
+            <!-- Claim Display -->
+            <div class="card mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">제시된 정보:</h2>
+                <p id="claimText" class="text-lg text-gray-700 leading-relaxed italic mb-4"></p>
+                <div id="initialFactCheckSummary" class="text-md text-gray-600 border-t border-b border-gray-200 py-3 mb-4">
+                    <!-- Initial summary will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Fact Check Categories -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- 글쓴이 (Author) -->
+                <div class="card info-card flex flex-col justify-between" id="authorCard">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">글쓴이 (Author)</h3>
+                    <p id="authorInfo" class="text-gray-600 mb-4">이 정보가 신뢰할 수 있는지 판단하고 버튼을 선택하세요.</p>
+                    <div id="authorButtons" class="flex justify-end space-x-2">
+                        <button class="btn-check px-5 py-2 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600" data-category="author" data-value="true">신뢰함</button>
+                        <button class="btn-check px-5 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600" data-category="author" data-value="false">신뢰 안 함</button>
+                    </div>
+                </div>
+
+                <!-- 출처 (Source) -->
+                <div class="card info-card flex flex-col justify-between" id="sourceCard">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">출처 (Source)</h3>
+                    <p id="sourceInfo" class="text-gray-600 mb-4">이 정보가 신뢰할 수 있는지 판단하고 버튼을 선택하세요.</p>
+                    <div id="sourceButtons" class="flex justify-end space-x-2">
+                        <button class="btn-check px-5 py-2 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600" data-category="source" data-value="true">신뢰함</button>
+                        <button class="btn-check px-5 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600" data-category="source" data-value="false">신뢰 안 함</button>
+                    </div>
+                </div>
+
+                <!-- 작성일 (Date) -->
+                <div class="card info-card flex flex-col justify-between" id="dateCard">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">작성일 (Date)</h3>
+                    <p id="dateInfo" class="text-gray-600 mb-4">이 정보가 신뢰할 수 있는지 판단하고 버튼을 선택하세요.</p>
+                    <div id="dateButtons" class="flex justify-end space-x-2">
+                        <button class="btn-check px-5 py-2 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600" data-category="date" data-value="true">신뢰함</button>
+                        <button class="btn-check px-5 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600" data-category="date" data-value="false">신뢰 안 함</button>
+                    </div>
+                </div>
+
+                <!-- 논리/설명 (Logic/Explanation) -->
+                <div class="card info-card flex flex-col justify-between" id="logicCard">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">논리/설명 (Logic/Explanation)</h3>
+                    <p id="logicInfo" class="text-gray-600 mb-4">이 정보가 신뢰할 수 있는지 판단하고 버튼을 선택하세요.</p>
+                    <div id="logicButtons" class="flex justify-end space-x-2">
+                        <button class="btn-check px-5 py-2 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600" data-category="logic" data-value="true">신뢰함</button>
+                        <button class="btn-check px-5 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600" data-category="logic" data-value="false">신뢰 안 함</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Final Judgment Buttons -->
+            <div id="finalJudgmentButtons" class="flex justify-center space-x-4 w-full mb-6 hidden">
+                <button id="isFactButton" class="px-8 py-4 bg-purple-600 text-white font-bold text-xl rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-105 duration-200">
+                    이 정보는 사실이다!
+                </button>
+                <button id="isLieButton" class="px-8 py-4 bg-red-600 text-white font-bold text-xl rounded-xl shadow-lg hover:bg-red-700 transition transform hover:scale-105 duration-200">
+                    이 정보는 거짓이다!
+                </button>
+            </div>
+
+            <!-- Result Display -->
+            <div id="resultArea" class="card hidden text-center">
+                <h2 id="resultTitle" class="text-3xl font-bold mb-4"></h2>
+                <p id="resultDetails" class="text-lg text-gray-700 mb-6"></p>
+                <p id="finalScore" class="text-2xl font-semibold text-blue-700 mb-6"></p>
+                <button id="nextClaimButton" class="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition transform hover:scale-105 duration-200">
+                    다음 정보 확인하기
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Spinner for API Calls (though not used in this specific example, good practice for future expansion) -->
+        <div id="loading" class="hidden flex items-center justify-center mt-8">
+            <div class="loading-spinner"></div>
+            <p class="ml-3 text-gray-600">정보를 분석 중입니다...</p>
+        </div>
+    </div>
+
+    <script>
+        // Game state variables
+        let currentClaimIndex = 0;
+        let score = 0; // Score for overall correct judgment
+        let correctOverallJudgments = 0; // Count of correctly answered problems
+        const userJudgements = {
+            author: null,
+            source: null,
+            date: null,
+            logic: null
+        };
+        const categories = ['author', 'source', 'date', 'logic'];
+
+        // Elements
+        const introScreen = document.getElementById('introScreen');
+        const startButton = document.getElementById('startButton');
+        const gameArea = document.getElementById('gameArea');
+        const claimText = document.getElementById('claimText');
+        const initialFactCheckSummary = document.getElementById('initialFactCheckSummary');
+        const finalJudgmentButtons = document.getElementById('finalJudgmentButtons');
+        const isFactButton = document.getElementById('isFactButton');
+        const isLieButton = document.getElementById('isLieButton');
+        const resultArea = document.getElementById('resultArea');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultDetails = document.getElementById('resultDetails');
+        const finalScore = document.getElementById('finalScore');
+        const nextClaimButton = document.getElementById('nextClaimButton');
+        const loadingSpinner = document.getElementById('loading');
+
+        // Sample claims with their fact-check details (Increased to 10)
+        const claims = [
+            {
+                id: 1,
+                text: "이웃집 눈사람, 부수면 벌금 낸다.",
+                initialAuthorDisplay: "부모님 (카카오톡)", // Removed "글쓴이: "
+                initialSourceDisplay: "카카오톡방", // Removed "출처: "
+                initialDateDisplay: "2021년 01월 12일", // Removed "작성일: "
+                details: {
+                    author: {
+                        info: "글쓴이: 부모님 (카카오톡 메시지). 해당 분야의 전문가가 아닙니다.",
+                        isReliable: false,
+                        explanation: "글쓴이는 특정 분야의 전문가가 아니며, 개인적인 의견을 전달하는 메시지이므로 신뢰하기 어렵습니다."
+                    },
+                    source: {
+                        info: "출처: 부모님과의 카톡방. 전문 기관이나 공신력 있는 언론이 아닙니다.",
+                        isReliable: false,
+                        explanation: "출처가 개인적인 대화 공간이므로 공식적인 정보로 보기 어렵습니다."
+                    },
+                    date: {
+                        info: "작성일: 2021년 01월 12일 오전 11:30. 구체적인 날짜가 명시되어 있지만, 최신 법률이나 사건에 대한 정보는 아닐 수 있습니다.",
+                        isReliable: true,
+                        explanation: "작성일이 명확하게 표시되어 있습니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 눈사람을 부수는 행위에 대한 처벌 근거가 명확히 제시되지 않았습니다. (예: 어떤 법률에 의해 처벌받는지)",
+                        isReliable: false,
+                        explanation: "어떤 법률에 의해 처벌받는지 등 뒷받침할 수 있는 구체적인 근거가 부족합니다."
+                    }
+                },
+                isFact: false, // Overall, it's a lie
+                overallExplanation: "이 정보는 '이웃집 눈사람을 부수면 벌금 낸다'는 주장에 대한 구체적인 법적 근거가 부족하며, 개인적인 메시지에서 전달된 것이므로 사실이 아닙니다. 재물손괴죄와 관련된 논란은 있지만, 모든 눈사람 파손이 즉시 벌금으로 이어지는 것은 아닙니다."
+            },
+            {
+                id: 2,
+                text: "하루에 물 8잔을 마시면 피부가 좋아진다.",
+                initialAuthorDisplay: "유명 뷰티 유튜버", // Removed "글쓴이: "
+                initialSourceDisplay: "개인 블로그 및 유튜브 채널", // Removed "출처: "
+                initialDateDisplay: "2023년 05월 10일", // Removed "작성일: "
+                details: {
+                    author: {
+                        info: "글쓴이: 유명 뷰티 유튜버. 피부 미용에 대한 경험은 많지만 의학 전문가는 아닙니다.",
+                        isReliable: false,
+                        explanation: "유명 뷰티 유튜버는 피부 미용에 대한 일반적인 조언을 줄 수 있지만, 의학적 또는 과학적 근거를 제공하는 전문가는 아닙니다."
+                    },
+                    source: {
+                        info: "출처: 개인 블로그 및 유튜브 채널. 과학적 연구나 의료 기관의 자료가 아닙니다.",
+                        isReliable: false,
+                        explanation: "개인적인 의견이나 경험이 담긴 콘텐츠이므로 객관적인 정보로 보기 어렵습니다."
+                    },
+                    date: {
+                        info: "작성일: 2023년 05월 10일. 비교적 최신 정보입니다.",
+                        isReliable: true,
+                        explanation: "작성일이 최근이며, 정보의 시의성을 판단하는 데 적합합니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 물 섭취가 전반적인 건강에 중요하지만, 피부 개선에 대한 직접적인 과학적 증거는 개인차가 큽니다. '무조건 피부가 좋아진다'는 논리에는 비약이 있습니다.",
+                        isReliable: false,
+                        explanation: "물의 충분한 섭취는 건강에 좋지만, '피부가 무조건 좋아진다'는 것은 과학적으로 검증되지 않은 일반적인 통념일 수 있습니다. 개인차가 존재합니다."
+                    }
+                },
+                isFact: false, // Overall, more of a common misconception than a strict fact
+                overallExplanation: "물 8잔 마시기가 피부에 좋다는 것은 일반적인 건강 상식처럼 여겨지지만, 과학적으로 '무조건' 피부가 좋아진다는 명확한 증거는 부족합니다. 수분 섭취는 필수적이지만, 피부 미용 효과는 개인의 체질과 식습관 등 복합적인 요소에 따라 달라집니다."
+            },
+            {
+                id: 3,
+                text: "미세먼지 농도가 높을 때는 외출을 자제하고 마스크를 착용해야 한다.",
+                initialAuthorDisplay: "기상청", // Removed "글쓴이: "
+                initialSourceDisplay: "기상청 웹사이트", // Removed "출처: "
+                initialDateDisplay: "오늘 날짜 실시간 예보", // Removed "작성일: "
+                details: {
+                    author: {
+                        info: "글쓴이: 기상청 (국가 공식 기관). 대기 환경 전문가입니다.",
+                        isReliable: true,
+                        explanation: "기상청은 국가 공식 기관으로, 대기 환경에 대한 전문적인 정보를 제공합니다. 신뢰할 수 있습니다."
+                    },
+                    source: {
+                        info: "출처: 기상청 웹사이트의 미세먼지 예보. 공신력 있는 정부 기관입니다.",
+                        isReliable: true,
+                        explanation: "기상청 웹사이트는 공식적이고 신뢰할 수 있는 정보 출처입니다."
+                    },
+                    date: {
+                        info: "작성일: 오늘 날짜의 실시간 예보. 가장 최신 정보입니다.",
+                        isReliable: true,
+                        explanation: "실시간 예보이므로 정보의 최신성이 매우 높습니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 미세먼지는 호흡기 건강에 악영향을 미치므로, 농도가 높을 때 외출을 자제하고 마스크를 착용하는 것이 건강 보호에 도움이 된다는 의학적, 과학적 근거가 충분합니다.",
+                        isReliable: true,
+                        explanation: "미세먼지가 인체에 미치는 영향에 대한 과학적 연구와 의학적 권고가 명확하게 존재하므로 논리적입니다."
+                    }
+                },
+                isFact: true, // Overall, it's a fact
+                overallExplanation: "이 정보는 미세먼지의 위험성과 대응 방법에 대한 과학적, 의학적으로 검증된 사실입니다. 기상청과 같은 공신력 있는 기관에서 권고하는 사항이므로 신뢰할 수 있습니다."
+            },
+            {
+                id: 4,
+                text: "매일 아침 공복에 레몬 물을 마시면 몸속 독소가 완벽하게 제거된다.",
+                initialAuthorDisplay: "건강 블로거",
+                initialSourceDisplay: "개인 건강 관련 블로그",
+                initialDateDisplay: "2022년 11월 5일",
+                details: {
+                    author: {
+                        info: "글쓴이: 건강 블로거. 의학 전문가가 아니며, 개인적인 경험과 일반적인 정보를 공유합니다.",
+                        isReliable: false,
+                        explanation: "건강 블로거는 특정 분야의 전문 지식을 검증받지 않은 경우가 많아, 모든 정보가 신뢰하기 어려울 수 있습니다."
+                    },
+                    source: {
+                        info: "출처: 개인 건강 관련 블로그. 과학적 연구나 의료 기관의 검증된 자료가 아닙니다.",
+                        isReliable: false,
+                        explanation: "개인 블로그는 객관적인 검증 없이 정보가 게시될 수 있으므로, 출처의 신뢰도가 낮습니다."
+                    },
+                    date: {
+                        info: "작성일: 2022년 11월 5일. 비교적 최근 정보이나, 건강 관련 정보는 항상 최신 의학적 근거를 확인해야 합니다.",
+                        isReliable: true,
+                        explanation: "작성일은 명확하나, 건강 정보는 항상 최신 의학적 근거와 비교하는 것이 중요합니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 레몬 물이 건강에 이로울 수 있지만, '독소 완벽 제거'는 의학적으로 입증되지 않은 과장된 표현입니다. 신체는 자체적인 해독 시스템을 가지고 있습니다.",
+                        isReliable: false,
+                        explanation: "'독소 완벽 제거'와 같은 극단적인 표현은 비과학적인 경우가 많습니다. 인체는 신장과 간을 통해 스스로 독소를 해독합니다."
+                    }
+                },
+                isFact: false,
+                overallExplanation: "레몬 물이 건강에 도움이 될 수 있지만, '몸속 독소를 완벽하게 제거한다'는 주장은 의학적으로 과장된 표현이며, 과학적 근거가 부족합니다. 우리 몸은 이미 뛰어난 해독 시스템을 가지고 있습니다."
+            },
+            {
+                id: 5,
+                text: "서울시 지하철 요금이 다음 달부터 200원 인상된다.",
+                initialAuthorDisplay: "익명 커뮤니티 게시자",
+                initialSourceDisplay: "온라인 익명 게시판",
+                initialDateDisplay: "오늘 날짜",
+                details: {
+                    author: {
+                        info: "글쓴이: 익명 커뮤니티 게시자. 해당 정보의 신뢰성을 확인할 수 없습니다.",
+                        isReliable: false,
+                        explanation: "익명의 글쓴이는 정보의 책임 소재가 불분명하므로, 신뢰할 수 없습니다."
+                    },
+                    source: {
+                        info: "출처: 온라인 익명 게시판. 공식적인 발표가 아니므로 신뢰할 수 없습니다.",
+                        isReliable: false,
+                        explanation: "온라인 익명 게시판은 가짜 정보가 쉽게 유포될 수 있는 공간이므로, 출처의 신뢰도가 낮습니다."
+                    },
+                    date: {
+                        info: "작성일: 오늘 날짜. 최신 정보이지만, 공식 발표가 아닌 경우 검증이 필요합니다.",
+                        isReliable: true,
+                        explanation: "최신 정보이므로 시의성은 있으나, 그 내용의 진위는 별도로 확인해야 합니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 지하철 요금 인상은 서울시의 공식 발표나 언론 보도를 통해 이루어지는 중요한 정책 결정입니다. 익명 게시판의 정보만으로는 신뢰하기 어렵습니다.",
+                        isReliable: false,
+                        explanation: "지하철 요금 인상과 같은 중요한 정보는 공식 기관의 발표를 통해 확인해야 합니다. 익명 게시판 정보는 논리적 근거가 부족합니다."
+                    }
+                },
+                isFact: false, // Assuming it's a fabricated claim for the game
+                overallExplanation: "지하철 요금 인상은 서울시의 공식 발표나 신뢰할 수 있는 언론 보도를 통해 확인해야 하는 정보입니다. 익명 온라인 게시판의 내용은 근거가 부족하며 사실이 아닙니다."
+            },
+            {
+                id: 6,
+                text: "고양이는 몸의 액체 비율이 높아 좁은 공간도 통과할 수 있으므로, 고양이 액체설은 과학적으로 증명되었다.",
+                initialAuthorDisplay: "과학 유튜버 (유명 채널)",
+                initialSourceDisplay: "과학 전문 유튜브 채널",
+                initialDateDisplay: "2024년 2월 20일",
+                details: {
+                    author: {
+                        info: "글쓴이: 과학 유튜버. 과학적 사실을 바탕으로 콘텐츠를 제작하지만, 밈(meme)을 이용한 비유적 표현을 사용하기도 합니다.",
+                        isReliable: true,
+                        explanation: "과학 유튜버는 전문성을 가지고 있지만, 밈을 사용하여 비유적으로 설명할 수 있습니다."
+                    },
+                    source: {
+                        info: "출처: 과학 전문 유튜브 채널. 일반적인 과학 지식을 다루지만, '액체설'은 비유적 표현입니다.",
+                        isReliable: true,
+                        explanation: "과학 전문 채널이므로 기본적인 정보는 신뢰할 수 있습니다."
+                    },
+                    date: {
+                        info: "작성일: 2024년 2월 20일. 최신 정보입니다.",
+                        isReliable: true,
+                        explanation: "최신 정보입니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 고양이가 좁은 공간을 잘 통과하는 것은 유연한 척추와 쇄골이 없는 신체 구조 때문입니다. '액체설'은 과학적 이론이 아닌 고양이의 유연성을 비유하는 표현입니다.",
+                        isReliable: false,
+                        explanation: "'고양이 액체설'은 과학적으로 입증된 이론이 아니라, 고양이의 뛰어난 유연성을 표현하는 재미있는 밈(meme)입니다. 고양이는 액체가 아닌 고체 생명체입니다."
+                    }
+                },
+                isFact: false, // The "science" part is false
+                overallExplanation: "고양이가 좁은 공간을 잘 통과하는 것은 사실이지만, '액체설'은 과학적으로 증명된 이론이 아니라 고양이의 유연함을 비유적으로 표현한 밈(meme)입니다. 고양이는 뼈와 근육을 가진 고체 생명체입니다."
+            },
+            {
+                id: 7,
+                text: "2024년 4월 1일은 만우절이었다.",
+                initialAuthorDisplay: "유명 뉴스 통신사",
+                initialSourceDisplay: "주요 언론사 기사",
+                initialDateDisplay: "2024년 4월 1일",
+                details: {
+                    author: {
+                        info: "글쓴이: 유명 뉴스 통신사. 신뢰할 수 있는 언론 기관입니다.",
+                        isReliable: true,
+                        explanation: "신뢰할 수 있는 언론 기관은 정확한 정보를 전달할 의무가 있습니다."
+                    },
+                    source: {
+                        info: "출처: 주요 언론사 기사. 공신력 있는 정보 출처입니다.",
+                        isReliable: true,
+                        explanation: "주요 언론사의 기사는 신뢰할 수 있는 정보 출처입니다."
+                    },
+                    date: {
+                        info: "작성일: 2024년 4월 1일. 해당 날짜에 대한 정보이므로 시의적절합니다.",
+                        isReliable: true,
+                        explanation: "작성일이 만우절 당일이므로 정보의 정확한 시점을 나타냅니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 4월 1일은 전 세계적으로 만우절로 통용되는 날이며, 이는 역사적, 문화적으로 잘 알려진 사실입니다.",
+                        isReliable: true,
+                        explanation: "4월 1일은 만우절이라는 것은 널리 알려진 사실이며, 논리적인 오류가 없습니다."
+                    }
+                },
+                isFact: true,
+                overallExplanation: "2024년 4월 1일은 전 세계적으로 '만우절(April Fools' Day)'로 기념되는 날입니다. 이는 일반 상식에 해당하며 사실입니다."
+            },
+            {
+                id: 8,
+                text: "지구 온난화는 사실이 아니며, 과학자들의 조작이다.",
+                initialAuthorDisplay: "익명 온라인 커뮤니티 회원",
+                initialSourceDisplay: "특정 주장을 하는 비전문 웹사이트",
+                initialDateDisplay: "2010년 7월 15일",
+                details: {
+                    author: {
+                        info: "글쓴이: 익명 온라인 커뮤니티 회원. 전문성이 없고 신뢰하기 어렵습니다.",
+                        isReliable: false,
+                        explanation: "익명으로 활동하는 글쓴이는 정보의 신뢰도를 보장하기 어렵습니다. 해당 분야의 전문가가 아닙니다."
+                    },
+                    source: {
+                        info: "출처: 특정 주장을 하는 비전문 웹사이트. 과학적 근거 없는 주장을 담는 경우가 많습니다.",
+                        isReliable: false,
+                        explanation: "과학적 검증 없이 특정 주장을 펼치는 웹사이트는 신뢰할 수 없는 정보 출처입니다."
+                    },
+                    date: {
+                        info: "작성일: 2010년 7월 15일. 매우 오래된 정보이며, 최신 과학적 연구 결과를 반영하지 않습니다.",
+                        isReliable: false,
+                        explanation: "오래된 정보는 최신 과학 연구 결과와 일치하지 않을 수 있으므로 신뢰하기 어렵습니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 전 세계 대부분의 과학자들이 기후 변화에 대한 강력한 증거와 합의를 제시하고 있습니다. '조작'이라는 주장은 과학적 증거가 부족한 음모론에 해당합니다.",
+                        isReliable: false,
+                        explanation: "지구 온난화는 수많은 과학적 연구와 데이터로 증명된 현상입니다. '조작'이라는 주장은 과학적 근거가 부족하며, 대부분의 기후 과학자들이 이에 동의하고 있습니다."
+                    }
+                },
+                isFact: false,
+                overallExplanation: "지구 온난화는 전 세계 과학계에서 광범위하게 받아들여지는 사실이며, 수많은 연구와 데이터가 이를 뒷받침합니다. '과학자들의 조작'이라는 주장은 과학적 근거가 없는 음모론에 해당합니다."
+            },
+            {
+                id: 9,
+                text: "스마트폰 충전 중 사용하면 배터리 수명이 급격히 줄어든다.",
+                initialAuthorDisplay: "스마트폰 커뮤니티 사용자",
+                initialSourceDisplay: "온라인 포럼 게시글",
+                initialDateDisplay: "2018년 3월 2일",
+                details: {
+                    author: {
+                        info: "글쓴이: 스마트폰 커뮤니티 사용자. 전문적인 기술 지식보다는 경험을 공유하는 경우가 많습니다.",
+                        isReliable: false,
+                        explanation: "커뮤니티 사용자는 개인적인 경험이나 속설을 공유할 수 있어, 기술적인 문제에 대한 정확한 정보는 아닐 수 있습니다."
+                    },
+                    source: {
+                        info: "출처: 온라인 포럼 게시글. 공식 제조사나 전문 기술 매체의 정보가 아닙니다.",
+                        isReliable: false,
+                        explanation: "온라인 포럼은 비공식적인 정보가 많아 신뢰도가 낮습니다."
+                    },
+                    date: {
+                        info: "작성일: 2018년 3월 2일. 꽤 오래된 정보로, 최신 배터리 기술에는 적용되지 않을 수 있습니다.",
+                        isReliable: false,
+                        explanation: "배터리 기술은 계속 발전하므로, 오래된 정보는 현재와 맞지 않을 수 있습니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 최신 스마트폰은 충전 중에도 과열 방지 및 전력 관리 시스템이 잘 되어 있어 급격한 수명 단축은 발생하지 않습니다. 장시간 고부하 사용 시 발열로 인한 영향은 있을 수 있으나 '급격한' 단축은 아닙니다.",
+                        isReliable: false,
+                        explanation: "최신 스마트폰의 배터리 및 충전 기술은 향상되어 충전 중 사용이 '급격한' 수명 단축으로 이어지지 않습니다. 과거의 잘못된 정보나 과장된 부분입니다."
+                    }
+                },
+                isFact: false,
+                overallExplanation: "최신 스마트폰은 충전 중 사용해도 배터리 수명이 '급격히' 줄어들지 않습니다. 기기 내부의 전력 관리 시스템이 이를 조절하며, 과거 배터리 기술에 비해 크게 개선되었습니다. 다만, 고사양 게임 등을 충전 중 장시간 플레이하면 발열로 인해 미미한 영향이 있을 수 있습니다."
+            },
+            {
+                id: 10,
+                text: "하루 30분 걷기 운동은 심혈관 질환 예방에 효과적이다.",
+                initialAuthorDisplay: "세계보건기구(WHO)",
+                initialSourceDisplay: "WHO 공식 발표 자료",
+                initialDateDisplay: "2023년 7월 1일",
+                details: {
+                    author: {
+                        info: "글쓴이: 세계보건기구(WHO). 세계적인 보건 분야의 권위 있는 기관입니다.",
+                        isReliable: true,
+                        explanation: "WHO는 전 세계 보건 분야에서 가장 권위 있는 기관이므로, 정보는 매우 신뢰할 수 있습니다."
+                    },
+                    source: {
+                        info: "출처: WHO 공식 발표 자료. 과학적 연구와 데이터에 기반한 공신력 있는 자료입니다.",
+                        isReliable: true,
+                        explanation: "WHO의 공식 자료는 엄격한 검증 과정을 거치므로 신뢰할 수 있는 출처입니다."
+                    },
+                    date: {
+                        info: "작성일: 2023년 7월 1일. 최신 건강 가이드라인을 반영한 정보입니다.",
+                        isReliable: true,
+                        explanation: "최신 정보이므로 현재 권고 사항을 잘 반영하고 있습니다."
+                    },
+                    logic: {
+                        info: "논리/설명: 규칙적인 걷기 운동을 포함한 신체 활동은 심혈관 건강을 증진하고 질병 위험을 낮춘다는 것이 수많은 의학 연구를 통해 입증된 사실입니다.",
+                        isReliable: true,
+                        explanation: "규칙적인 신체 활동이 심혈관 건강에 긍정적인 영향을 미친다는 것은 의학적으로 널리 인정된 사실입니다. 논리적 근거가 매우 충분합니다."
+                    }
+                },
+                isFact: true,
+                overallExplanation: "하루 30분 걷기를 포함한 규칙적인 신체 활동은 심혈관 질환을 예방하고 전반적인 건강을 증진하는 데 매우 효과적입니다. 이는 세계보건기구(WHO)를 비롯한 여러 보건 기관의 권고 사항이며 과학적으로도 입증된 사실입니다."
+            }
+        ];
+
+        // Function to load a claim
+        function loadClaim(index) {
+            if (index >= claims.length) {
+                displayOverallResult();
+                return;
+            }
+
+            currentClaimIndex = index;
+            const claim = claims[currentClaimIndex];
+
+            claimText.textContent = `[${currentClaimIndex + 1}/${claims.length}] ${claim.text}`;
+            initialFactCheckSummary.innerHTML = `
+                <p><strong>글쓴이:</strong> ${claim.initialAuthorDisplay}</p>
+                <p><strong>출처:</strong> ${claim.initialSourceDisplay}</p>
+                <p><strong>작성일:</strong> ${claim.initialDateDisplay}</p>
+            `;
+
+            resultArea.classList.add('hidden');
+            finalJudgmentButtons.classList.add('hidden');
+            isFactButton.disabled = true;
+            isLieButton.disabled = true;
+
+            for (const category of categories) {
+                userJudgements[category] = null;
+                const infoP = document.getElementById(`${category}Info`);
+                const buttonsDiv = document.getElementById(`${category}Buttons`);
+
+                infoP.textContent = "이 정보가 신뢰할 수 있는지 판단하고 버튼을 선택하세요.";
+
+                buttonsDiv.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('selected-true', 'selected-false');
+                    if (btn.dataset.value === 'true') {
+                        btn.classList.add('bg-green-500', 'hover:bg-green-600');
+                        btn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    } else {
+                        btn.classList.add('bg-red-500', 'hover:bg-red-600');
+                        btn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    }
+                    // Make both buttons visible again for a new claim
+                    btn.style.display = 'inline-block'; 
+                    btn.disabled = false; // Enable buttons for new claim
+                });
+            }
+        }
+
+        document.querySelectorAll('.btn-check').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const category = event.target.dataset.category;
+                const value = event.target.dataset.value === 'true';
+                const claim = claims[currentClaimIndex];
+                const infoP = document.getElementById(`${category}Info`);
+
+                infoP.textContent = claim.details[category].info;
+                userJudgements[category] = value;
+
+                const buttonsInGroup = document.querySelectorAll(`[data-category="${category}"]`);
+                buttonsInGroup.forEach(btn => {
+                    // Hide all buttons in the group
+                    btn.style.display = 'none'; 
+                });
+
+                // Display only the clicked button
+                event.target.style.display = 'inline-block'; 
+                if (value) {
+                    event.target.classList.add('selected-true');
+                    event.target.classList.remove('bg-green-500', 'hover:bg-green-600');
+                } else {
+                    event.target.classList.add('selected-false');
+                    event.target.classList.remove('bg-red-500', 'hover:bg-red-600');
+                }
+                
+                // Disable the selected button to prevent re-selection (as requested by previous version)
+                event.target.disabled = true;
+
+
+                checkAllJudgementsMade();
+            });
+        });
+
+        function checkAllJudgementsMade() {
+            const allJudged = categories.every(cat => userJudgements[cat] !== null);
+            if (allJudged) {
+                finalJudgmentButtons.classList.remove('hidden');
+                isFactButton.disabled = false;
+                isLieButton.disabled = false;
+            }
+        }
+
+        function handleFinalJudgment(userIsFactJudgment) {
+            const claim = claims[currentClaimIndex];
+            let correctIndividualJudgements = 0;
+
+            for (const category of categories) {
+                if (userJudgements[category] === claim.details[category].isReliable) {
+                    correctIndividualJudgements++;
+                }
+                document.getElementById(`${category}Info`).textContent = claim.details[category].explanation;
+            }
+
+            if (userIsFactJudgment === claim.isFact) {
+                resultTitle.textContent = "✅ 올바른 판결입니다!";
+                resultTitle.classList.remove('text-red-600');
+                resultTitle.classList.add('text-green-600');
+                score += 100;
+                correctOverallJudgments++;
+            } else {
+                resultTitle.textContent = "❌ 다시 확인해보세요!";
+                resultTitle.classList.remove('text-green-600');
+                resultTitle.classList.add('text-red-600');
+            }
+
+            resultDetails.textContent = claim.overallExplanation;
+            finalScore.textContent = `현재 점수: ${score}점 (개별 항목 ${correctIndividualJudgements}개 일치)`;
+            resultArea.classList.remove('hidden');
+            finalJudgmentButtons.classList.add('hidden');
+
+            document.querySelectorAll('.btn-check').forEach(btn => btn.disabled = true);
+        }
+
+        isFactButton.addEventListener('click', () => {
+            handleFinalJudgment(true);
+        });
+
+        isLieButton.addEventListener('click', () => {
+            handleFinalJudgment(false);
+        });
+
+        nextClaimButton.addEventListener('click', () => {
+            loadClaim(currentClaimIndex + 1);
+        });
+
+        startButton.addEventListener('click', () => {
+            introScreen.classList.add('hidden');
+            gameArea.classList.remove('hidden');
+            score = 0;
+            correctOverallJudgments = 0;
+            loadClaim(0);
+        });
+
+        function displayOverallResult() {
+            gameArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            resultTitle.textContent = "게임 종료!";
+            resultDetails.textContent = `총 ${claims.length}개의 문제 중 ${correctOverallJudgements}개를 맞췄습니다!`;
+            finalScore.textContent = `최종 점수: ${score}점`;
+            nextClaimButton.textContent = "다시 도전하기";
+            nextClaimButton.removeEventListener('click', () => loadClaim(currentClaimIndex + 1));
+            nextClaimButton.addEventListener('click', () => {
+                score = 0;
+                correctOverallJudgments = 0;
+                currentClaimIndex = 0;
+                introScreen.classList.remove('hidden');
+                resultArea.classList.add('hidden');
+                nextClaimButton.textContent = "다음 정보 확인하기";
+                loadClaim(0);
+            });
+        }
+
+        window.onload = function() {
+            // Game starts after user clicks "Start Game"
+            // Ensure intro screen is visible and game area is hidden initially
+            introScreen.classList.remove('hidden');
+            gameArea.classList.add('hidden');
+        };
+    </script>
+</body>
+</html>
